@@ -2,10 +2,26 @@ import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+
+// Lazy initialization - solo se crea cuando se necesita
+let stripeInstance: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    if (!apiKey) {
+      throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+    }
+    stripeInstance = new Stripe(apiKey);
+    console.log('✅ Stripe initialized');
+    console.log('✅ Stripe initialized');
+  }
+  return stripeInstance;
+}
 
 // Crear Customer en Stripe
 export async function createStripeCustomer(email: string, name?: string) {
+  const stripe = getStripe();
   const customer = await stripe.customers.create({
     email,
     name,
@@ -20,6 +36,8 @@ export async function createSubscription(
   tenantId: string,
   priceId: string
 ) {
+  const stripe = getStripe();
+  
   const user = await prisma.user.findFirst({
     where: { id: userId, tenantId },
     include: { tenant: true },
@@ -135,6 +153,8 @@ export async function cancelSubscription(
   userId: string,
   tenantId: string
 ) {
+  const stripe = getStripe();
+  
   const subscription = await prisma.subscription.findFirst({
     where: {
       stripeSubscriptionId: subscriptionId,
@@ -167,6 +187,8 @@ export async function cancelSubscription(
 
 // Portal de cliente
 export async function createCustomerPortal(tenantId: string, returnUrl: string) {
+  const stripe = getStripe();
+  
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
   });
