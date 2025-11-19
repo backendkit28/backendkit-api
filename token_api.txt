@@ -1,0 +1,8 @@
+{
+  "user": {
+    "id": "b20c335c-cf23-4fd6-b656-ebdd8e940da5",
+    "email": "usuario@test.com",
+    "createdAt": "2025-11-17T07:59:49.280Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiMjBjMzM1Yy1jZjIzLTRmZDYtYjY1Ni1lYmRkOGU5NDBkYTUiLCJ0ZW5hbnRJZCI6IjkyMzcxMDFkLWMzN2ItNDVjNi1iODBhLWRlZjY4Y2FhMWJmYiIsImVtYWlsIjoidXN1YXJpb0B0ZXN0LmNvbSIsImlhdCI6MTc2MzM2NjM4OSwiZXhwIjoxNzYzOTcxMTg5fQ.ktNKZvxz0tQavkIwkbD3VQcBrt65L0Ti-XPB3d8Kg4Y"
+}

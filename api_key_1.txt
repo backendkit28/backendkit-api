@@ -1,0 +1,7 @@
+{
+  "id": "9237101d-c37b-45c6-b80a-def68caa1bfb",
+  "name": "Mi Primera App",
+  "apiKey": "bk_c121386cade98ebb15456a867d8e57ff2e007f13ad0f5e239cf5436a454e9254",
+  "plan": "starter",
+  "createdAt": "2025-11-17T07:53:42.072Z"
+}

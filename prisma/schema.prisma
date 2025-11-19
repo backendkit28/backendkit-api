@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabla de CLIENTES (tenants que pagan BackendKit)
+model Tenant {
+  id                String   @id @default(uuid())
+  name              String
+  apiKey            String   @unique
+  plan              String   @default("starter")
+  stripeCustomerId  String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  users             User[]
+  subscriptions     Subscription[]
+  
+  @@map("tenants")
+}
+
+// Tabla de USUARIOS (usuarios finales de los clientes)
+model User {
+  id            String   @id @default(uuid())
+  tenantId      String
+  email         String
+  passwordHash  String?  // Ahora es opcional para OAuth
+  emailVerified Boolean  @default(false)
+  oauthProvider String?  // google, github, etc
+  oauthId       String?  // ID del usuario en el provider
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  subscriptions Subscription[]
+  
+  @@unique([tenantId, email])
+  @@unique([oauthProvider, oauthId])
+  @@map("users")
+}
+
+// Tabla de SUSCRIPCIONES
+model Subscription {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  userId                String
+  stripeSubscriptionId  String   @unique
+  stripePriceId         String
+  status                String   // active, canceled, past_due, trialing
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  user                  User     @relation(fields: [userId], references: [id])
+  
+  @@map("subscriptions")
+}
