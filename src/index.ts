@@ -1,15 +1,15 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
-//import * as dotenv from 'dotenv';
 import { authRoutes } from './routes/auth.routes';
 import { tenantRoutes } from './routes/tenant.routes';
 import { subscriptionRoutes } from './routes/subscription.routes';
 import { webhookRoutes } from './routes/webhook.routes';
-
-dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -17,9 +17,39 @@ const fastify = Fastify({
   logger: true,
 });
 
-// CORS
+// ✅ SEGURIDAD: Helmet para headers HTTP seguros
+fastify.register(helmet, {
+  contentSecurityPolicy: false, // Desactivado para APIs
+  global: true,
+});
+
+// ✅ SEGURIDAD: Rate Limiting global
+fastify.register(rateLimit, {
+  max: 100, // Máximo 100 requests
+  timeWindow: '15 minutes', // Por ventana de 15 minutos
+  errorResponseBuilder: (request, context) => {
+    return {
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Rate limit exceeded. Try again in ${context.after}`,
+    };
+  },
+});
+
+// ✅ SEGURIDAD: CORS mejorado
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [
+      'https://backendkit.dev',
+      'https://www.backendkit.dev',
+      'https://app.backendkit.dev',
+      process.env.FRONTEND_URL,
+    ].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0)
+  : true; // En desarrollo permite todo
+
 fastify.register(cors, {
-  origin: true,
+  origin: allowedOrigins as any,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
 
 // Ruta raíz
@@ -28,6 +58,7 @@ fastify.get('/', async () => {
     name: 'BackendKit API',
     version: '1.0.0',
     status: 'running',
+    environment: process.env.NODE_ENV || 'development',
     documentation: {
       health: 'GET /health',
       auth: {
@@ -61,6 +92,7 @@ fastify.get('/health', async () => {
     timestamp: new Date().toISOString(),
     status: 'ok',
     database: 'checking...',
+    environment: process.env.NODE_ENV || 'development',
   };
 
   try {
@@ -80,16 +112,28 @@ fastify.register(tenantRoutes, { prefix: '/admin/tenants' });
 fastify.register(subscriptionRoutes, { prefix: '/api/subscription' });
 fastify.register(webhookRoutes, { prefix: '/webhooks' });
 
-// Error handler - ✅ CORREGIDO
+// ✅ SEGURIDAD: Error handler mejorado
 fastify.setErrorHandler((error, request, reply) => {
   fastify.log.error(error);
+
+  // No exponer detalles internos en producción
+  const isDevelopment = process.env.NODE_ENV !== 'production';
   
-  // Manejar el error de forma segura
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  // Type guard para error
+  const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error 
+    ? (error.statusCode as number) 
+    : 500;
   
-  reply.status(500).send({
+  const errorMessage = error instanceof Error 
+    ? (isDevelopment ? error.message : 'An error occurred')
+    : 'An error occurred';
+  
+  const stack = error instanceof Error && isDevelopment ? error.stack : undefined;
+
+  reply.status(statusCode).send({
     error: 'Internal Server Error',
     message: errorMessage,
+    ...(stack && { stack }),
   });
 });
 
@@ -99,6 +143,8 @@ const start = async () => {
     const port = parseInt(process.env.PORT || '3000');
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Server running on http://localhost:${port}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 Security: Rate limiting & Helmet enabled`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
