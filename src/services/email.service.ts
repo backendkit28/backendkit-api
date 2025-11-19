@@ -1,11 +1,26 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Inicialización lazy - solo se crea cuando se necesita
+let resendInstance: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not set in environment variables');
+    }
+    resendInstance = new Resend(apiKey);
+    console.log('✅ Resend initialized');
+  }
+  return resendInstance;
+}
+
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 // Email de bienvenida
 export async function sendWelcomeEmail(email: string, name?: string) {
   try {
+    const resend = getResend(); // Obtener instancia lazy
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -20,7 +35,6 @@ export async function sendWelcomeEmail(email: string, name?: string) {
         <p>The BackendKit Team</p>
       `,
     });
-    
     console.log('✅ Welcome email sent successfully to:', email);
     return { success: true };
   } catch (error) {
@@ -35,6 +49,7 @@ export async function sendSubscriptionConfirmation(
   plan: string
 ) {
   try {
+    const resend = getResend(); // Obtener instancia lazy
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -48,7 +63,6 @@ export async function sendSubscriptionConfirmation(
         <p>The BackendKit Team</p>
       `,
     });
-    
     console.log('✅ Subscription confirmation email sent to:', email);
     return { success: true };
   } catch (error) {
@@ -60,6 +74,7 @@ export async function sendSubscriptionConfirmation(
 // Email de pago fallido
 export async function sendPaymentFailedEmail(email: string) {
   try {
+    const resend = getResend(); // Obtener instancia lazy
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -73,7 +88,6 @@ export async function sendPaymentFailedEmail(email: string) {
         <p>The BackendKit Team</p>
       `,
     });
-    
     console.log('✅ Payment failed email sent to:', email);
     return { success: true };
   } catch (error) {
@@ -88,6 +102,7 @@ export async function sendSubscriptionCanceledEmail(
   endDate: Date
 ) {
   try {
+    const resend = getResend(); // Obtener instancia lazy
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -101,7 +116,6 @@ export async function sendSubscriptionCanceledEmail(
         <p>The BackendKit Team</p>
       `,
     });
-    
     console.log('✅ Cancellation email sent to:', email);
     return { success: true };
   } catch (error) {
