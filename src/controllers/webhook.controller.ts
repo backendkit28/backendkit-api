@@ -8,14 +8,36 @@ import {
 } from '../services/email.service';
 
 const prisma = new PrismaClient();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+// Lazy initialization - solo se crea cuando se necesita
+let stripeInstance: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    if (!apiKey) {
+      throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+    }
+    stripeInstance = new Stripe(apiKey);
+    console.log('✅ Stripe initialized in webhook controller');
+  }
+  return stripeInstance;
+}
+
+const getWebhookSecret = () => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error('STRIPE_WEBHOOK_SECRET is not set in environment variables');
+  }
+  return secret;
+};
 
 export async function handleStripeWebhook(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
+  const stripe = getStripe();
+  const webhookSecret = getWebhookSecret();
   const sig = request.headers['stripe-signature'] as string;
 
   if (!sig) {
@@ -78,6 +100,8 @@ async function handleSubscriptionUpdate(subscription: any) {
 }
 
 async function handleSubscriptionDeleted(subscription: any) {
+  const stripe = getStripe();
+  
   await prisma.subscription.updateMany({
     where: { stripeSubscriptionId: subscription.id },
     data: { status: 'canceled' },
