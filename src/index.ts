@@ -13,6 +13,9 @@ import { tenantRoutes } from './routes/tenant.routes';
 import { subscriptionRoutes } from './routes/subscription.routes';
 import { webhookRoutes } from './routes/webhook.routes';
 
+console.log('🔑 ADMIN_KEY available:', !!process.env.ADMIN_KEY);
+console.log('🔑 ADMIN_KEY value:', process.env.ADMIN_KEY?.substring(0, 5) + '...');
+
 const prisma = new PrismaClient();
 
 const fastify = Fastify({
