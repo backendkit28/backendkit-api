@@ -25,50 +25,40 @@ const fastify = Fastify({
 });
 
 /* -------------------------------------------------------
-   🚨 CORS CONFIG FIJO + CORRECTO PARA PRODUCCIÓN
+   🌐 CORS CONFIG LIMPIO Y CORRECTO
 --------------------------------------------------------*/
 
 const frontendUrlsEnv = process.env.FRONTEND_URL || '';
-const extraAllowed = frontendUrlsEnv.split(',').map((u) => u.trim()).filter(Boolean);
+const extraAllowed = frontendUrlsEnv.split(',')
+  .map((u) => u.trim())
+  .filter(Boolean);
 
 const allowedOrigins = [
   'https://backendkit.dev',
   'https://www.backendkit.dev',
   'https://app.backendkit.dev',
-  'https://dashboard.backendkit.dev', // ⬅️ Añadir este
+  'https://dashboard.backendkit.dev',   // <-- agregado
   ...extraAllowed,
 ];
 
 console.log('🌐 Allowed Origins:', allowedOrigins);
 
-// Registrar CORS antes de todo
+// Registrar CORS
 fastify.register(cors, {
-  origin: (origin, cb) => {
-    // 💡 Usamos la lista 'allowedOrigins' definida al inicio, que incluye
-    //    las URLs fijas más las de FRONTEND_URL (si aplica).
-
-    // Permitir si origin es undefined (ej: Postman)
-    if (!origin) {
-      cb(null, true);
-      return;
-    }
-
-    // 💡 Usa la lista completa:
-    if (allowedOrigins.includes(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Not allowed by CORS"), false);
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
 });
 
-/* -------------------------------------------------------
-   🛡 Seguridad: Helmet + Rate Limiter
---------------------------------------------------------*/
+// ✅ Helmet después (sin crossOrigin restrictions)
 fastify.register(helmet, {
   contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
 });
 
 fastify.register(rateLimit, {
@@ -79,7 +69,6 @@ fastify.register(rateLimit, {
 /* -------------------------------------------------------
    🏠 Rutas base
 --------------------------------------------------------*/
-
 fastify.get('/', async () => {
   return {
     name: 'BackendKit API',
@@ -113,11 +102,11 @@ fastify.register(authRoutes, { prefix: '/api/auth' });
 fastify.register(tenantRoutes, { prefix: '/admin/tenants' });
 fastify.register(subscriptionRoutes, { prefix: '/api/subscription' });
 
-// ❗ Webhook va al final, no debe pasar por CORS ni JSON parsing
+// Webhooks deben ir al final
 fastify.register(webhookRoutes, { prefix: '/webhooks' });
 
 /* -------------------------------------------------------
-   ❗ Global Error Handler (fix TS: error is unknown)
+   ❗ Global Error Handler (corrige error TS: unknown)
 --------------------------------------------------------*/
 fastify.setErrorHandler((error: any, request, reply) => {
   fastify.log.error(error);
