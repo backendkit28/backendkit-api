@@ -37,17 +37,21 @@ fastify.register(rateLimit, {
 });
 
 // ✅ SEGURIDAD: CORS mejorado
+const frontendUrls = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  : [];
+
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
       'https://backendkit.dev',
       'https://www.backendkit.dev',
       'https://app.backendkit.dev',
-      process.env.FRONTEND_URL,
-    ].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0)
-  : true; // En desarrollo permite todo
+      ...frontendUrls,
+    ].filter((origin) => origin && origin.length > 0)
+  : true;
 
 fastify.register(cors, {
-  origin: allowedOrigins as any,
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
