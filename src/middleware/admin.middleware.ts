@@ -7,6 +7,10 @@ export async function validateAdminKey(
   reply: FastifyReply
 ) {
   const adminKey = request.headers['x-admin-key'] as string;
+  
+  console.log('Received key:', adminKey);
+  console.log('Expected key:', ADMIN_KEY);
+  console.log('Match:', adminKey === ADMIN_KEY);
 
   if (!adminKey || adminKey !== ADMIN_KEY) {
     return reply.status(403).send({
