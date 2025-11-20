@@ -22,6 +22,13 @@ const fastify = Fastify({
   logger: true,
 });
 
+fastify.register(cors, {
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+});
+
 // ✅ SEGURIDAD: Helmet para headers HTTP seguros
 fastify.register(helmet, {
   contentSecurityPolicy: false, // Desactivado para APIs
@@ -55,12 +62,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
     ].filter((origin) => origin && origin.length > 0)
   : true;
 
-fastify.register(cors, {
-  origin: true,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-});
+
 
 // Ruta raíz
 fastify.get('/', async () => {
