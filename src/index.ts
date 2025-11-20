@@ -1,5 +1,7 @@
 import * as dotenv from 'dotenv';
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
