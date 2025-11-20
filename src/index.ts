@@ -51,7 +51,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   : true;
 
 fastify.register(cors, {
-  origin: allowedOrigins,
+  origin: true,  // Temporal
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
