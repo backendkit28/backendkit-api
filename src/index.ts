@@ -14,38 +14,40 @@ import { tenantRoutes } from './routes/tenant.routes';
 import { subscriptionRoutes } from './routes/subscription.routes';
 import { webhookRoutes } from './routes/webhook.routes';
 
-// Debug keys
+// Debug
 console.log('🔑 ADMIN_KEY available:', !!process.env.ADMIN_KEY);
-console.log('🔑 ADMIN_KEY value:', process.env.ADMIN_KEY?.substring(0, 5) + '...');
 
 const prisma = new PrismaClient();
-
-const fastify = Fastify({
-  logger: true,
-});
+const fastify = Fastify({ logger: true });
 
 /* -------------------------------------------------------
-   🌐 CORS CONFIG LIMPIO Y CORRECTO
+   🌐 CORS CONFIG CORRECTA PARA FASTIFY 5
 --------------------------------------------------------*/
 
 const frontendUrlsEnv = process.env.FRONTEND_URL || '';
-const extraAllowed = frontendUrlsEnv.split(',')
-  .map((u) => u.trim())
-  .filter(Boolean);
+const extraAllowed = frontendUrlsEnv.split(',').map(u => u.trim()).filter(Boolean);
 
 const allowedOrigins = [
   'https://backendkit.dev',
   'https://www.backendkit.dev',
   'https://app.backendkit.dev',
-  'https://dashboard.backendkit.dev',   // <-- agregado
+  'https://dashboard.backendkit.dev',
   ...extraAllowed,
 ];
 
 console.log('🌐 Allowed Origins:', allowedOrigins);
 
-// Registrar CORS
 fastify.register(cors, {
-  origin: allowedOrigins,
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // Postman/cURL ok
+
+    if (allowedOrigins.includes(origin)) {
+      return cb(null, true);
+    }
+
+    console.error("❌ CORS blocked:", origin);
+    return cb(new Error("Not allowed by CORS"), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
@@ -53,7 +55,9 @@ fastify.register(cors, {
   maxAge: 600,
 });
 
-// ✅ Helmet después (sin crossOrigin restrictions)
+/* -------------------------------------------------------
+   🛡 Seguridad
+--------------------------------------------------------*/
 fastify.register(helmet, {
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
@@ -69,29 +73,19 @@ fastify.register(rateLimit, {
 /* -------------------------------------------------------
    🏠 Rutas base
 --------------------------------------------------------*/
-fastify.get('/', async () => {
-  return {
-    name: 'BackendKit API',
-    version: '1.0.0',
-    status: 'running',
-    environment: process.env.NODE_ENV || 'development',
-  };
-});
+fastify.get('/', async () => ({
+  name: 'BackendKit API',
+  version: '1.0.0',
+  status: 'running',
+  environment: process.env.NODE_ENV || 'development',
+}));
 
 fastify.get('/health', async () => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return {
-      status: 'ok',
-      database: 'connected',
-      timestamp: new Date().toISOString(),
-    };
-  } catch (e) {
-    return {
-      status: 'degraded',
-      database: 'disconnected',
-      timestamp: new Date().toISOString(),
-    };
+    return { status: 'ok', database: 'connected', timestamp: new Date().toISOString() };
+  } catch {
+    return { status: 'degraded', database: 'disconnected', timestamp: new Date().toISOString() };
   }
 });
 
@@ -102,21 +96,23 @@ fastify.register(authRoutes, { prefix: '/api/auth' });
 fastify.register(tenantRoutes, { prefix: '/admin/tenants' });
 fastify.register(subscriptionRoutes, { prefix: '/api/subscription' });
 
-// Webhooks deben ir al final
+// Webhooks al final
 fastify.register(webhookRoutes, { prefix: '/webhooks' });
 
 /* -------------------------------------------------------
-   ❗ Global Error Handler (corrige error TS: unknown)
+   ❗ Global Error Handler
 --------------------------------------------------------*/
-fastify.setErrorHandler((error: any, request, reply) => {
+fastify.setErrorHandler((err, request, reply) => {
+  const error = err as any;  // 👈 Solución
+
   fastify.log.error(error);
 
   const isDev = process.env.NODE_ENV !== 'production';
 
-  reply.status(error?.statusCode || 500).send({
+  reply.status(error.statusCode || 500).send({
     error: 'Internal Server Error',
-    message: isDev ? error?.message : 'An error occurred',
-    ...(isDev ? { stack: error?.stack } : {}),
+    message: isDev ? error.message : 'An error occurred',
+    ...(isDev ? { stack: error.stack } : {}),
   });
 });
 
@@ -129,7 +125,6 @@ const start = async () => {
     await fastify.listen({ port, host: '0.0.0.0' });
 
     console.log(`🚀 Server running on port ${port}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   } catch (e) {
     fastify.log.error(e);
     process.exit(1);
