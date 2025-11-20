@@ -35,6 +35,7 @@ const allowedOrigins = [
   'https://backendkit.dev',
   'https://www.backendkit.dev',
   'https://app.backendkit.dev',
+  'https://dashboard.backendkit.dev', // ⬅️ Añadir este
   ...extraAllowed,
 ];
 
@@ -43,7 +44,8 @@ console.log('🌐 Allowed Origins:', allowedOrigins);
 // Registrar CORS antes de todo
 fastify.register(cors, {
   origin: (origin, cb) => {
-    const allowedOrigins = process.env.FRONTEND_URL?.split(",") ?? [];
+    // 💡 Usamos la lista 'allowedOrigins' definida al inicio, que incluye
+    //    las URLs fijas más las de FRONTEND_URL (si aplica).
 
     // Permitir si origin es undefined (ej: Postman)
     if (!origin) {
@@ -51,6 +53,7 @@ fastify.register(cors, {
       return;
     }
 
+    // 💡 Usa la lista completa:
     if (allowedOrigins.includes(origin)) {
       cb(null, true);
     } else {
