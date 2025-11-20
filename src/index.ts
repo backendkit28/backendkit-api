@@ -56,9 +56,10 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   : true;
 
 fastify.register(cors, {
-  origin: true,  // Temporal
+  origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 });
 
 // Ruta raíz
