@@ -14,7 +14,10 @@ import { subscriptionRoutes } from './routes/subscription.routes';
 import { webhookRoutes } from './routes/webhook.routes';
 
 console.log('🔑 ADMIN_KEY available:', !!process.env.ADMIN_KEY);
-console.log('🔑 ADMIN_KEY value:', process.env.ADMIN_KEY?.substring(0, 5) + '...');
+console.log(
+  '🔑 ADMIN_KEY value:',
+  process.env.ADMIN_KEY ? process.env.ADMIN_KEY.substring(0, 5) + '...' : 'undefined'
+);
 
 const prisma = new PrismaClient();
 
@@ -22,6 +25,7 @@ const fastify = Fastify({
   logger: true,
 });
 
+// Manejo especial para OPTIONS
 fastify.addHook('onRequest', async (request, reply) => {
   if (request.method === 'OPTIONS') {
     reply
@@ -35,6 +39,7 @@ fastify.addHook('onRequest', async (request, reply) => {
   }
 });
 
+// CORS en Fastify
 fastify.register(cors, {
   origin: true,
   credentials: true,
@@ -42,16 +47,16 @@ fastify.register(cors, {
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 });
 
-// ✅ SEGURIDAD: Helmet para headers HTTP seguros
+// Seguridad: Helmet
 fastify.register(helmet, {
-  contentSecurityPolicy: false, // Desactivado para APIs
+  contentSecurityPolicy: false,
   global: true,
 });
 
-// ✅ SEGURIDAD: Rate Limiting global
+// Rate Limiting
 fastify.register(rateLimit, {
-  max: 100, // Máximo 100 requests
-  timeWindow: '15 minutes', // Por ventana de 15 minutos
+  max: 100,
+  timeWindow: '15 minutes',
   errorResponseBuilder: (request, context) => {
     return {
       statusCode: 429,
@@ -61,21 +66,20 @@ fastify.register(rateLimit, {
   },
 });
 
-// ✅ SEGURIDAD: CORS mejorado
-const frontendUrls = process.env.FRONTEND_URL 
-  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+// Lista de orígenes permitidos en producción
+const frontendUrls = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
   : [];
 
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [
-      'https://backendkit.dev',
-      'https://www.backendkit.dev',
-      'https://app.backendkit.dev',
-      ...frontendUrls,
-    ].filter((origin) => origin && origin.length > 0)
-  : true;
-
-
+const allowedOrigins =
+  process.env.NODE_ENV === 'production'
+    ? [
+        'https://backendkit.dev',
+        'https://www.backendkit.dev',
+        'https://app.backendkit.dev',
+        ...frontendUrls,
+      ].filter((origin) => origin && origin.length > 0)
+    : true;
 
 // Ruta raíz
 fastify.get('/', async () => {
@@ -111,9 +115,9 @@ fastify.get('/', async () => {
   };
 });
 
-// Health check
+// Healthcheck
 fastify.get('/health', async () => {
-  const checks = {
+  const checks: Record<string, string> = {
     timestamp: new Date().toISOString(),
     status: 'ok',
     database: 'checking...',
@@ -123,7 +127,7 @@ fastify.get('/health', async () => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = 'connected';
-  } catch (error) {
+  } catch {
     checks.database = 'disconnected';
     checks.status = 'degraded';
   }
@@ -137,30 +141,33 @@ fastify.register(tenantRoutes, { prefix: '/admin/tenants' });
 fastify.register(subscriptionRoutes, { prefix: '/api/subscription' });
 fastify.register(webhookRoutes, { prefix: '/webhooks' });
 
-// ✅ SEGURIDAD: Error handler mejorado
-fastify.setErrorHandler((error, request, reply) => {
-  fastify.log.error(error);
+// Error handler GENERAL — FIX al error “error is unknown”
+fastify.setErrorHandler(
+  (
+    error: unknown, // <— TypeScript ya no marca error aquí
+    request,
+    reply
+  ) => {
+    fastify.log.error(error);
 
-  // No exponer detalles internos en producción
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-  
-  // Type guard para error
-  const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error 
-    ? (error.statusCode as number) 
-    : 500;
-  
-  const errorMessage = error instanceof Error 
-    ? (isDevelopment ? error.message : 'An error occurred')
-    : 'An error occurred';
-  
-  const stack = error instanceof Error && isDevelopment ? error.stack : undefined;
+    const isDev = process.env.NODE_ENV !== 'production';
 
-  reply.status(statusCode).send({
-    error: 'Internal Server Error',
-    message: errorMessage,
-    ...(stack && { stack }),
-  });
-});
+    let message = 'An error occurred';
+    let stack;
+
+    // Si viene un Error real, obtenemos datos seguros
+    if (error instanceof Error) {
+      message = isDev ? error.message : 'An error occurred';
+      stack = isDev ? error.stack : undefined;
+    }
+
+    reply.status(500).send({
+      error: 'Internal Server Error',
+      message,
+      ...(stack && { stack }),
+    });
+  }
+);
 
 // Iniciar servidor
 const start = async () => {
