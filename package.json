@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "build": "tsc && npx prisma generate",
-  "start": "npx prisma migrate deploy && node dist/index.js"
-},
+    "dev": "nodemon src/index.ts",
+    "build": "tsc && npx prisma generate",
+    "start": "npx prisma migrate deploy && node dist/index.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -23,6 +24,8 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/rate-limit": "^10.3.0",
+    "@fastify/swagger": "^9.6.1",
+    "@fastify/swagger-ui": "^5.2.3",
     "@prisma/client": "^6.19.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
