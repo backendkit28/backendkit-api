@@ -10,6 +10,9 @@ export async function getMetrics() {
   // Total de usuarios
   const totalUsers = await prisma.user.count();
 
+  // Total de suscripciones (todas)
+  const totalSubscriptions = await prisma.subscription.count();
+
   // Suscripciones activas
   const activeSubscriptions = await prisma.subscription.count({
     where: {
@@ -45,38 +48,48 @@ export async function getMetrics() {
   });
 
   // Calcular churn rate (simplificado)
-  const totalSubscriptionsEver = await prisma.subscription.count();
   const canceledSubscriptions = await prisma.subscription.count({
     where: { cancelAtPeriodEnd: true },
   });
 
-  const churnRate = totalSubscriptionsEver > 0
-    ? (canceledSubscriptions / totalSubscriptionsEver) * 100
+  const churnRate = totalSubscriptions > 0
+    ? (canceledSubscriptions / totalSubscriptions) * 100
     : 0;
 
-  // Revenue by plan
-  const starterRevenue = subscriptions.filter(
-    (s) => s.stripePriceId === process.env.STRIPE_PRICE_STARTER
-  ).length * 9.99;
+  // User growth (últimos 7 días para la gráfica)
+  const userGrowth: Array<{ date: string; users: number }> = [];
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    date.setHours(0, 0, 0, 0);
 
-  const proRevenue = subscriptions.filter(
-    (s) => s.stripePriceId === process.env.STRIPE_PRICE_PRO
-  ).length * 29.99;
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + 1);
 
-  // User growth (últimos 30 días)
-  const userGrowth: Array<{ date: string; count: number }> = [];
+    const count = await prisma.user.count({
+      where: {
+        createdAt: {
+          gte: date,
+          lt: nextDate,
+        },
+      },
+    });
+
+    userGrowth.push({
+      date: date.toISOString().split('T')[0], // YYYY-MM-DD
+      users: count,
+    });
+  }
 
   return {
     totalTenants,
     totalUsers,
+    totalSubscriptions,
     activeSubscriptions,
-    mrr,
+    mrr: parseFloat(mrr.toFixed(2)),
+    churnRate: parseFloat(churnRate.toFixed(2)),
     newUsersLast30Days,
-    churnRate,
-    revenueByPlan: {
-      starter: starterRevenue,
-      pro: proRevenue,
-    },
     userGrowth,
   };
 }
