@@ -2,25 +2,14 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Obtener métricas generales
 export async function getMetrics() {
-  // Total de tenants
   const totalTenants = await prisma.tenant.count();
-
-  // Total de usuarios
   const totalUsers = await prisma.user.count();
-
-  // Total de suscripciones (todas)
   const totalSubscriptions = await prisma.subscription.count();
-
-  // Suscripciones activas
   const activeSubscriptions = await prisma.subscription.count({
-    where: {
-      status: 'active',
-    },
+    where: { status: 'active' },
   });
 
-  // Calcular MRR (Monthly Recurring Revenue)
   const subscriptions = await prisma.subscription.findMany({
     where: { status: 'active' },
     select: { stripePriceId: true },
@@ -35,19 +24,15 @@ export async function getMetrics() {
     return total + (priceMap[sub.stripePriceId] || 0);
   }, 0);
 
-  // Nuevos usuarios en los últimos 30 días
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const newUsersLast30Days = await prisma.user.count({
     where: {
-      createdAt: {
-        gte: thirtyDaysAgo,
-      },
+      createdAt: { gte: thirtyDaysAgo },
     },
   });
 
-  // Calcular churn rate (simplificado)
   const canceledSubscriptions = await prisma.subscription.count({
     where: { cancelAtPeriodEnd: true },
   });
@@ -56,7 +41,6 @@ export async function getMetrics() {
     ? (canceledSubscriptions / totalSubscriptions) * 100
     : 0;
 
-  // User growth (últimos 7 días para la gráfica)
   const userGrowth: Array<{ date: string; users: number }> = [];
   
   for (let i = 6; i >= 0; i--) {
@@ -82,7 +66,17 @@ export async function getMetrics() {
     });
   }
 
-  // RETURN COMPLETO CON TODOS LOS CAMPOS
+  console.log('Returning metrics:', {
+    totalTenants,
+    totalUsers,
+    totalSubscriptions,
+    activeSubscriptions,
+    mrr,
+    churnRate,
+    newUsersLast30Days,
+    userGrowthLength: userGrowth.length
+  });
+
   return {
     totalTenants,
     totalUsers,
@@ -95,7 +89,6 @@ export async function getMetrics() {
   };
 }
 
-// Obtener todos los usuarios con sus tenants
 export async function getAllUsers() {
   return await prisma.user.findMany({
     include: {
@@ -112,7 +105,6 @@ export async function getAllUsers() {
   });
 }
 
-// Obtener todas las suscripciones
 export async function getAllSubscriptions() {
   return await prisma.subscription.findMany({
     include: {
