@@ -61,6 +61,17 @@ export async function getMetrics() {
     });
   }
 
+  console.log('🔥 METRICS CALCULATED:', {
+    totalTenants,
+    totalUsers, 
+    totalSubscriptions,
+    activeSubscriptions,
+    mrr,
+    churnRate,
+    newUsersLast30Days,
+    userGrowthLength: userGrowth.length
+  });
+
   return {
     totalTenants,
     totalUsers,
