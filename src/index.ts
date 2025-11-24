@@ -33,7 +33,7 @@ const fastify = Fastify({
   }
 });
 
-// ✅ CORS SIMPLIFICADO
+// ✅ CORS CON SOPORTE PARA VERCEL PREVIEWS
 const frontendUrls = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
   : [];
@@ -49,7 +49,29 @@ const allowedOrigins = [
 console.log('🌐 Allowed Origins:', allowedOrigins);
 
 fastify.register(cors, {
-  origin: allowedOrigins,
+  origin: (origin, cb) => {
+    // Permitir requests sin origin (como Postman, curl)
+    if (!origin) {
+      cb(null, true);
+      return;
+    }
+
+    // Permitir origins en la lista
+    if (allowedOrigins.includes(origin)) {
+      cb(null, true);
+      return;
+    }
+
+    // Permitir todos los subdominios de vercel.app (para preview deployments)
+    if (origin.endsWith('.vercel.app')) {
+      cb(null, true);
+      return;
+    }
+
+    // Rechazar otros origins
+    console.log('❌ CORS blocked:', origin);
+    cb(new Error('Not allowed by CORS'), false);  // ✅ Agregado segundo parámetro
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
