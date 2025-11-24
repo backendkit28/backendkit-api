@@ -160,10 +160,19 @@ export async function tenantRoutes(fastify: FastifyInstance) {
             totalUsers: { type: 'integer', example: 1337 },
             totalSubscriptions: { type: 'integer', example: 89 },
             activeSubscriptions: { type: 'integer', example: 67 },
-            monthlyRevenue: { type: 'number', example: 4500.00 },
-            newUsersToday: { type: 'integer', example: 15 },
-            newUsersThisWeek: { type: 'integer', example: 89 },
-            newUsersThisMonth: { type: 'integer', example: 342 }
+            mrr: { type: 'number', example: 299.99 },
+            churnRate: { type: 'number', example: 5.2 },
+            newUsersLast30Days: { type: 'integer', example: 150 },
+            userGrowth: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', example: '2025-11-24' },
+                  users: { type: 'integer', example: 15 }
+                }
+              }
+            }
           }
         },
         401: {
