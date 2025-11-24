@@ -77,11 +77,12 @@ export async function getMetrics() {
     });
 
     userGrowth.push({
-      date: date.toISOString().split('T')[0], // YYYY-MM-DD
+      date: date.toISOString().split('T')[0],
       users: count,
     });
   }
 
+  // RETURN COMPLETO CON TODOS LOS CAMPOS
   return {
     totalTenants,
     totalUsers,
