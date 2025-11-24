@@ -28,9 +28,7 @@ export async function getMetrics() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const newUsersLast30Days = await prisma.user.count({
-    where: {
-      createdAt: { gte: thirtyDaysAgo },
-    },
+    where: { createdAt: { gte: thirtyDaysAgo } },
   });
 
   const canceledSubscriptions = await prisma.subscription.count({
@@ -53,10 +51,7 @@ export async function getMetrics() {
 
     const count = await prisma.user.count({
       where: {
-        createdAt: {
-          gte: date,
-          lt: nextDate,
-        },
+        createdAt: { gte: date, lt: nextDate },
       },
     });
 
@@ -65,17 +60,6 @@ export async function getMetrics() {
       users: count,
     });
   }
-
-  console.log('Returning metrics:', {
-    totalTenants,
-    totalUsers,
-    totalSubscriptions,
-    activeSubscriptions,
-    mrr,
-    churnRate,
-    newUsersLast30Days,
-    userGrowthLength: userGrowth.length
-  });
 
   return {
     totalTenants,
@@ -92,35 +76,18 @@ export async function getMetrics() {
 export async function getAllUsers() {
   return await prisma.user.findMany({
     include: {
-      tenant: {
-        select: {
-          name: true,
-          plan: true,
-        },
-      },
+      tenant: { select: { name: true, plan: true } },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: { createdAt: 'desc' },
   });
 }
 
 export async function getAllSubscriptions() {
   return await prisma.subscription.findMany({
     include: {
-      tenant: {
-        select: {
-          name: true,
-        },
-      },
-      user: {
-        select: {
-          email: true,
-        },
-      },
+      tenant: { select: { name: true } },
+      user: { select: { email: true } },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: { createdAt: 'desc' },
   });
 }
